@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "descricao",
+  "icone",
+  "ativo",
+  "col_break_1",
+  "ordem",
+  "abrir_em_nova_aba",
+  "section_acao",
+  "tipo_acao",
+  "rota_destino",
+  "doctype_destino",
+  "report_destino",
+  "url_destino",
+  "script_acao",
+  "section_visual",
+  "cor_fundo",
+  "cor_texto",
+  "cor_icone"
+ ],
+ "fields": [
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Título",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descrição"
+  },
+  {
+   "fieldname": "icone",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ícone (ex: fa fa-chart-bar ou emoji)"
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "ordem",
+   "fieldtype": "Int",
+   "label": "Ordem"
+  },
+  {
+   "default": "0",
+   "fieldname": "abrir_em_nova_aba",
+   "fieldtype": "Check",
+   "label": "Abrir em Nova Aba"
+  },
+  {
+   "fieldname": "section_acao",
+   "fieldtype": "Section Break",
+   "label": "Ação"
+  },
+  {
+   "default": "Abrir Rota",
+   "fieldname": "tipo_acao",
+   "fieldtype": "Select",
+   "label": "Tipo de Ação",
+   "options": "Abrir Doctype\nAbrir Rota\nAbrir Report\nAbrir URL\nExecutar Script"
+  },
+  {
+   "fieldname": "rota_destino",
+   "fieldtype": "Data",
+   "label": "Rota Destino"
+  },
+  {
+   "fieldname": "doctype_destino",
+   "fieldtype": "Data",
+   "label": "Doctype Destino"
+  },
+  {
+   "fieldname": "report_destino",
+   "fieldtype": "Data",
+   "label": "Report Destino"
+  },
+  {
+   "fieldname": "url_destino",
+   "fieldtype": "Data",
+   "label": "URL Destino"
+  },
+  {
+   "fieldname": "script_acao",
+   "fieldtype": "Code",
+   "label": "Script de Ação (JS)"
+  },
+  {
+   "fieldname": "section_visual",
+   "fieldtype": "Section Break",
+   "label": "Visual"
+  },
+  {
+   "fieldname": "cor_fundo",
+   "fieldtype": "Color",
+   "label": "Cor de Fundo"
+  },
+  {
+   "fieldname": "cor_texto",
+   "fieldtype": "Color",
+   "label": "Cor do Texto"
+  },
+  {
+   "fieldname": "cor_icone",
+   "fieldtype": "Color",
+   "label": "Cor do Ícone"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gf Ui Overlay",
+ "name": "GF UI Overlay Card",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

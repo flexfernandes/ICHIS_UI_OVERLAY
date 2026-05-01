@@ -1,0 +1,615 @@
+/*
+ * GF UI Overlay — gf_ui_overlay.css
+ * GREENFARMS | UI Overlay Manager
+ *
+ * Este CSS controla:
+ *  1. Ocultação segura da tela original durante boot do overlay
+ *  2. Container principal do overlay
+ *  3. Layout da Home Moderna (GF Modern Desk)
+ *  4. Cards, Hero, Busca, Indicadores, Últimas Atividades
+ *  5. Animações de entrada
+ *  6. Botão de retorno ao Desk original
+ *  7. Responsividade
+ *  8. Compatibilidade com variáveis do GF Theme Settings
+ */
+
+/* =============================================================
+   FASE 1 — BOOT: oculta tela original enquanto overlay carrega
+   ============================================================= */
+
+body.gf-overlay-booting .layout-main-section,
+body.gf-overlay-booting .desk-sidebar,
+body.gf-overlay-booting .standard-sidebar,
+body.gf-overlay-booting .page-container,
+body.gf-overlay-booting .layout-main,
+body.gf-overlay-booting #page-desktop,
+body.gf-overlay-booting .frappe-app {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* =============================================================
+   FASE 2 — ATIVO: mostra o overlay
+   ============================================================= */
+
+body.gf-overlay-active .layout-main-section,
+body.gf-overlay-active #page-desktop {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.gf-overlay-active #gf-ui-overlay-root {
+  display: block !important;
+}
+
+/* =============================================================
+   VARIÁVEIS DE FALLBACK (usadas se GF Theme não estiver ativo)
+   ============================================================= */
+
+:root {
+  --gf-bg-main:        var(--gf-bg-main,        #f8fafc);
+  --gf-bg-card:        var(--gf-bg-card,        #ffffff);
+  --gf-bg-secondary:   var(--gf-bg-secondary,   #ffffff);
+  --gf-text-main:      var(--gf-text-main,      #111827);
+  --gf-text-secondary: var(--gf-text-secondary, #6b7280);
+  --gf-font-main:      var(--gf-font-main,      Inter, "Segoe UI", Arial, sans-serif);
+  --gf-accent:         var(--gf-accent,         #16a34a);
+  --gf-accent-dark:    var(--gf-accent-dark,    #166534);
+  --gf-border:         var(--gf-border,         #e5e7eb);
+  --gf-shadow:         var(--gf-shadow,         rgba(15, 23, 42, 0.08));
+
+  /* Overlay específicos */
+  --gf-overlay-navbar-h:   56px;
+  --gf-overlay-radius:     12px;
+  --gf-overlay-card-radius:14px;
+  --gf-overlay-transition: 250ms ease;
+}
+
+/* =============================================================
+   CONTAINER RAIZ DO OVERLAY
+   ============================================================= */
+
+#gf-ui-overlay-root {
+  display: none;
+  position: fixed;
+  top: var(--gf-overlay-navbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--gf-bg-main);
+  z-index: 900;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--gf-font-main);
+  color: var(--gf-text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animações de entrada */
+#gf-ui-overlay-root.gf-anim-fade {
+  animation: gfFadeIn var(--gf-overlay-transition) both;
+}
+
+#gf-ui-overlay-root.gf-anim-slide {
+  animation: gfSlideIn var(--gf-overlay-transition) both;
+}
+
+#gf-ui-overlay-root.gf-anim-suave {
+  animation: gfSuaveIn var(--gf-overlay-transition) both;
+}
+
+@keyframes gfFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes gfSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gfSuaveIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =============================================================
+   WRAPPER INTERNO (max-width e centralização)
+   ============================================================= */
+
+.gf-overlay-wrapper {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  width: 100%;
+}
+
+.gf-overlay-wrapper.gf-full-width {
+  max-width: 100%;
+  padding: 0 16px 48px;
+}
+
+/* =============================================================
+   HERO — ÁREA DE BOAS-VINDAS
+   ============================================================= */
+
+.gf-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 36px 0 28px;
+  border-bottom: 1px solid var(--gf-border);
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.gf-hero-text h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gf-text-main);
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.gf-hero-text p {
+  font-size: 14px;
+  color: var(--gf-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.gf-hero-text .gf-greeting {
+  font-size: 13px;
+  color: var(--gf-accent);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* =============================================================
+   BUSCA GLOBAL
+   ============================================================= */
+
+.gf-search-bar {
+  flex: 0 0 360px;
+  max-width: 100%;
+}
+
+.gf-search-inner {
+  display: flex;
+  align-items: center;
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  padding: 0 14px;
+  gap: 10px;
+  transition: border-color var(--gf-overlay-transition),
+              box-shadow var(--gf-overlay-transition);
+  box-shadow: 0 1px 3px var(--gf-shadow);
+}
+
+.gf-search-inner:focus-within {
+  border-color: var(--gf-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-accent) 12%, transparent);
+}
+
+.gf-search-icon {
+  color: var(--gf-text-secondary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.gf-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: var(--gf-font-main);
+  color: var(--gf-text-main);
+  padding: 10px 0;
+}
+
+.gf-search-input::placeholder {
+  color: var(--gf-text-secondary);
+}
+
+/* =============================================================
+   SEÇÃO GENÉRICA
+   ============================================================= */
+
+.gf-section {
+  margin-bottom: 36px;
+}
+
+.gf-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.gf-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gf-text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gf-section-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: var(--gf-accent);
+  border-radius: 2px;
+}
+
+.gf-section-link {
+  font-size: 12px;
+  color: var(--gf-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.gf-section-link:hover {
+  text-decoration: underline;
+}
+
+/* =============================================================
+   GRID DE CARDS DE MÓDULOS
+   ============================================================= */
+
+.gf-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.gf-card {
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-overlay-card-radius);
+  padding: 20px 18px;
+  cursor: pointer;
+  transition: transform var(--gf-overlay-transition),
+              box-shadow var(--gf-overlay-transition),
+              border-color var(--gf-overlay-transition);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.gf-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--card-accent, var(--gf-accent));
+  opacity: 0;
+  transition: opacity var(--gf-overlay-transition);
+}
+
+.gf-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px var(--gf-shadow);
+  border-color: var(--card-accent, var(--gf-accent));
+}
+
+.gf-card:hover::before {
+  opacity: 1;
+}
+
+.gf-card-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background: var(--card-bg-icon, #f0fdf4);
+  flex-shrink: 0;
+}
+
+.gf-card-body {}
+
+.gf-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gf-text-main);
+  margin: 0 0 3px;
+  line-height: 1.3;
+}
+
+.gf-card-desc {
+  font-size: 11.5px;
+  color: var(--gf-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.gf-card-arrow {
+  color: var(--gf-text-secondary);
+  font-size: 16px;
+  align-self: flex-end;
+  margin-top: auto;
+  transition: color var(--gf-overlay-transition), transform var(--gf-overlay-transition);
+}
+
+.gf-card:hover .gf-card-arrow {
+  color: var(--card-accent, var(--gf-accent));
+  transform: translateX(3px);
+}
+
+/* =============================================================
+   INDICADORES / KPIs
+   ============================================================= */
+
+.gf-indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.gf-indicator-card {
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-overlay-card-radius);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gf-indicator-label {
+  font-size: 11px;
+  color: var(--gf-text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gf-indicator-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gf-text-main);
+  line-height: 1;
+}
+
+.gf-indicator-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.gf-indicator-badge.up {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.gf-indicator-badge.down {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.gf-indicator-badge.neutral {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* =============================================================
+   ÚLTIMAS ATIVIDADES
+   ============================================================= */
+
+.gf-activity-list {
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-overlay-card-radius);
+  overflow: hidden;
+}
+
+.gf-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--gf-border);
+  transition: background var(--gf-overlay-transition);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.gf-activity-item:last-child {
+  border-bottom: none;
+}
+
+.gf-activity-item:hover {
+  background: color-mix(in srgb, var(--gf-accent) 5%, transparent);
+}
+
+.gf-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gf-accent);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.gf-activity-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gf-activity-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gf-text-main);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gf-activity-sub {
+  font-size: 11.5px;
+  color: var(--gf-text-secondary);
+  margin: 0;
+}
+
+.gf-activity-time {
+  font-size: 11px;
+  color: var(--gf-text-secondary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* =============================================================
+   BOTÃO VOLTAR AO DESK ORIGINAL
+   ============================================================= */
+
+.gf-back-to-desk {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: 40px;
+  padding: 8px 16px 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gf-text-secondary);
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--gf-shadow);
+  transition: all var(--gf-overlay-transition);
+  z-index: 1000;
+  font-family: var(--gf-font-main);
+  border: none;
+}
+
+.gf-back-to-desk:hover {
+  background: var(--gf-text-main);
+  color: var(--gf-bg-card);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--gf-shadow);
+}
+
+.gf-back-to-desk-icon {
+  font-size: 15px;
+}
+
+/* =============================================================
+   LOADING SKELETON (enquanto carrega dados dinâmicos)
+   ============================================================= */
+
+.gf-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--gf-border) 25%,
+    color-mix(in srgb, var(--gf-border) 60%, transparent) 50%,
+    var(--gf-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: gfSkeleton 1.4s infinite;
+  border-radius: 6px;
+}
+
+@keyframes gfSkeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* =============================================================
+   OVERLAY MODO TEMA BLACK (herda vars do GF Theme)
+   ============================================================= */
+
+body[data-gf-tema="Black"] #gf-ui-overlay-root {
+  background-color: #020617;
+  color: #f9fafb;
+}
+
+body[data-gf-tema="Black"] .gf-card {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+body[data-gf-tema="Black"] .gf-activity-list {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+body[data-gf-tema="Black"] .gf-search-inner {
+  background: #0f172a;
+  border-color: #1f2937;
+}
+
+body[data-gf-tema="Black"] .gf-indicator-card {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+/* =============================================================
+   RESPONSIVIDADE
+   ============================================================= */
+
+@media (max-width: 768px) {
+  .gf-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 0 20px;
+  }
+
+  .gf-search-bar {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .gf-overlay-wrapper {
+    padding: 0 16px 32px;
+  }
+
+  .gf-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .gf-indicators-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gf-back-to-desk {
+    bottom: 12px;
+    right: 12px;
+    font-size: 11px;
+    padding: 7px 12px 7px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gf-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gf-indicators-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gf-hero-text h1 {
+    font-size: 20px;
+  }
+}

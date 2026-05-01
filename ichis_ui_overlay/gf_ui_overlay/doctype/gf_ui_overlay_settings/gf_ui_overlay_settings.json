@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_geral",
+  "ativar_sobreposicoes",
+  "ativar_sobreposicao_desk",
+  "col_break_geral_1",
+  "usar_tema_gf",
+  "diagnostico_console",
+  "section_modo",
+  "modo_padrao_sobreposicao",
+  "animacao_entrada",
+  "tempo_animacao_ms",
+  "col_break_modo_1",
+  "permitir_fallback_tela_original",
+  "mostrar_botao_voltar_tela_original",
+  "section_permissoes",
+  "aplicar_por_usuario",
+  "aplicar_por_perfil"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_geral",
+   "fieldtype": "Section Break",
+   "label": "Configuração Geral"
+  },
+  {
+   "default": "1",
+   "fieldname": "ativar_sobreposicoes",
+   "fieldtype": "Check",
+   "label": "Ativar Sobreposições"
+  },
+  {
+   "default": "1",
+   "fieldname": "ativar_sobreposicao_desk",
+   "fieldtype": "Check",
+   "label": "Ativar Sobreposição do Desk"
+  },
+  {
+   "fieldname": "col_break_geral_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "usar_tema_gf",
+   "fieldtype": "Check",
+   "label": "Usar Variáveis do GF Theme"
+  },
+  {
+   "default": "1",
+   "fieldname": "diagnostico_console",
+   "fieldtype": "Check",
+   "label": "Diagnóstico no Console"
+  },
+  {
+   "fieldname": "section_modo",
+   "fieldtype": "Section Break",
+   "label": "Modo e Animação"
+  },
+  {
+   "default": "Substituir Tela",
+   "fieldname": "modo_padrao_sobreposicao",
+   "fieldtype": "Select",
+   "label": "Modo Padrão de Sobreposição",
+   "options": "Substituir Tela\nSobrepor Tela\nComplementar Tela"
+  },
+  {
+   "default": "Suave",
+   "fieldname": "animacao_entrada",
+   "fieldtype": "Select",
+   "label": "Animação de Entrada",
+   "options": "Nenhuma\nSuave\nSlide\nFade"
+  },
+  {
+   "default": "250",
+   "fieldname": "tempo_animacao_ms",
+   "fieldtype": "Int",
+   "label": "Duração da Animação (ms)"
+  },
+  {
+   "fieldname": "col_break_modo_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "permitir_fallback_tela_original",
+   "fieldtype": "Check",
+   "label": "Permitir Fallback para Tela Original"
+  },
+  {
+   "default": "1",
+   "fieldname": "mostrar_botao_voltar_tela_original",
+   "fieldtype": "Check",
+   "label": "Mostrar Botão \"Voltar ao Desk Original\""
+  },
+  {
+   "fieldname": "section_permissoes",
+   "fieldtype": "Section Break",
+   "label": "Controle de Aplicação"
+  },
+  {
+   "default": "0",
+   "fieldname": "aplicar_por_usuario",
+   "fieldtype": "Check",
+   "label": "Aplicar por Usuário"
+  },
+  {
+   "default": "0",
+   "fieldname": "aplicar_por_perfil",
+   "fieldtype": "Check",
+   "label": "Aplicar por Perfil (Role)"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gf Ui Overlay",
+ "name": "GF UI Overlay Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

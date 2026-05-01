@@ -1,0 +1,394 @@
+{
+ "actions": [],
+ "autoname": "field:nome_tecnico",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_identificacao",
+  "titulo",
+  "nome_tecnico",
+  "ativo",
+  "col_break_id_1",
+  "descricao",
+  "prioridade_execucao",
+  "section_alvo",
+  "tipo_alvo",
+  "rota_alvo",
+  "col_break_alvo_1",
+  "doctype_alvo",
+  "workspace_alvo",
+  "report_alvo",
+  "section_modo",
+  "modo_sobreposicao",
+  "ocultar_tela_original",
+  "preservar_tela_original_em_memoria",
+  "col_break_modo_1",
+  "permitir_retorno_original",
+  "carregar_ao_abrir_rota",
+  "recarregar_ao_mudar_rota",
+  "observar_dom",
+  "tempo_espera_ms",
+  "section_permissoes",
+  "aplicar_para_todos",
+  "section_layout",
+  "tipo_layout",
+  "largura_maxima",
+  "usar_largura_total",
+  "col_break_layout_1",
+  "exibir_topbar_customizada",
+  "exibir_sidebar_customizada",
+  "exibir_busca_global",
+  "exibir_area_boas_vindas",
+  "exibir_cards_atalhos",
+  "exibir_indicadores",
+  "exibir_ultimas_atividades",
+  "section_conteudo",
+  "titulo_pagina",
+  "subtitulo_pagina",
+  "texto_boas_vindas",
+  "col_break_conteudo_1",
+  "icone_pagina",
+  "imagem_fundo",
+  "section_cards",
+  "cards",
+  "section_customizado",
+  "html_customizado",
+  "css_customizado",
+  "js_customizado",
+  "section_diagnostico",
+  "habilitar_logs",
+  "marcador_js",
+  "versao_overlay"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_identificacao",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "label": "Título",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome_tecnico",
+   "fieldtype": "Data",
+   "label": "Nome Técnico (ID único)",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "col_break_id_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição"
+  },
+  {
+   "default": "10",
+   "fieldname": "prioridade_execucao",
+   "fieldtype": "Int",
+   "label": "Prioridade de Execução"
+  },
+  {
+   "fieldname": "section_alvo",
+   "fieldtype": "Section Break",
+   "label": "Alvo — Rota ou Tela"
+  },
+  {
+   "default": "Desk",
+   "fieldname": "tipo_alvo",
+   "fieldtype": "Select",
+   "label": "Tipo de Alvo",
+   "options": "Desk\nWorkspace\nList View\nForm View\nPage\nRoute\nReport\nDashboard"
+  },
+  {
+   "fieldname": "rota_alvo",
+   "fieldtype": "Data",
+   "label": "Rota Alvo (ex: /app, /app/workspace/Home)"
+  },
+  {
+   "fieldname": "col_break_alvo_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "doctype_alvo",
+   "fieldtype": "Data",
+   "label": "Doctype Alvo"
+  },
+  {
+   "fieldname": "workspace_alvo",
+   "fieldtype": "Data",
+   "label": "Workspace Alvo"
+  },
+  {
+   "fieldname": "report_alvo",
+   "fieldtype": "Data",
+   "label": "Report Alvo"
+  },
+  {
+   "fieldname": "section_modo",
+   "fieldtype": "Section Break",
+   "label": "Modo de Aplicação"
+  },
+  {
+   "default": "Substituir Tela",
+   "fieldname": "modo_sobreposicao",
+   "fieldtype": "Select",
+   "label": "Modo de Sobreposição",
+   "options": "Substituir Tela\nSobrepor Tela\nComplementar Tela"
+  },
+  {
+   "default": "1",
+   "fieldname": "ocultar_tela_original",
+   "fieldtype": "Check",
+   "label": "Ocultar Tela Original"
+  },
+  {
+   "default": "1",
+   "fieldname": "preservar_tela_original_em_memoria",
+   "fieldtype": "Check",
+   "label": "Preservar Tela Original em Memória"
+  },
+  {
+   "fieldname": "col_break_modo_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "permitir_retorno_original",
+   "fieldtype": "Check",
+   "label": "Permitir Retorno à Tela Original"
+  },
+  {
+   "default": "1",
+   "fieldname": "carregar_ao_abrir_rota",
+   "fieldtype": "Check",
+   "label": "Carregar ao Abrir a Rota"
+  },
+  {
+   "default": "1",
+   "fieldname": "recarregar_ao_mudar_rota",
+   "fieldtype": "Check",
+   "label": "Recarregar ao Mudar de Rota"
+  },
+  {
+   "default": "1",
+   "fieldname": "observar_dom",
+   "fieldtype": "Check",
+   "label": "Observar DOM (MutationObserver)"
+  },
+  {
+   "default": "100",
+   "fieldname": "tempo_espera_ms",
+   "fieldtype": "Int",
+   "label": "Tempo de Espera (ms)"
+  },
+  {
+   "fieldname": "section_permissoes",
+   "fieldtype": "Section Break",
+   "label": "Permissões"
+  },
+  {
+   "default": "1",
+   "fieldname": "aplicar_para_todos",
+   "fieldtype": "Check",
+   "label": "Aplicar para Todos os Usuários"
+  },
+  {
+   "fieldname": "section_layout",
+   "fieldtype": "Section Break",
+   "label": "Layout"
+  },
+  {
+   "default": "Home Moderna",
+   "fieldname": "tipo_layout",
+   "fieldtype": "Select",
+   "label": "Tipo de Layout",
+   "options": "Home Moderna\nDashboard Corporativo\nGrid de Aplicações\nPágina de Cards\nLayout Livre"
+  },
+  {
+   "default": "1280px",
+   "fieldname": "largura_maxima",
+   "fieldtype": "Data",
+   "label": "Largura Máxima"
+  },
+  {
+   "default": "0",
+   "fieldname": "usar_largura_total",
+   "fieldtype": "Check",
+   "label": "Usar Largura Total"
+  },
+  {
+   "fieldname": "col_break_layout_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "exibir_topbar_customizada",
+   "fieldtype": "Check",
+   "label": "Exibir Topbar Customizada"
+  },
+  {
+   "default": "0",
+   "fieldname": "exibir_sidebar_customizada",
+   "fieldtype": "Check",
+   "label": "Exibir Sidebar Customizada"
+  },
+  {
+   "default": "1",
+   "fieldname": "exibir_busca_global",
+   "fieldtype": "Check",
+   "label": "Exibir Busca Global"
+  },
+  {
+   "default": "1",
+   "fieldname": "exibir_area_boas_vindas",
+   "fieldtype": "Check",
+   "label": "Exibir Área de Boas-Vindas"
+  },
+  {
+   "default": "1",
+   "fieldname": "exibir_cards_atalhos",
+   "fieldtype": "Check",
+   "label": "Exibir Cards de Atalhos"
+  },
+  {
+   "default": "1",
+   "fieldname": "exibir_indicadores",
+   "fieldtype": "Check",
+   "label": "Exibir Indicadores"
+  },
+  {
+   "default": "1",
+   "fieldname": "exibir_ultimas_atividades",
+   "fieldtype": "Check",
+   "label": "Exibir Últimas Atividades"
+  },
+  {
+   "fieldname": "section_conteudo",
+   "fieldtype": "Section Break",
+   "label": "Conteúdo"
+  },
+  {
+   "fieldname": "titulo_pagina",
+   "fieldtype": "Data",
+   "label": "Título da Página"
+  },
+  {
+   "fieldname": "subtitulo_pagina",
+   "fieldtype": "Data",
+   "label": "Subtítulo"
+  },
+  {
+   "fieldname": "texto_boas_vindas",
+   "fieldtype": "Small Text",
+   "label": "Texto de Boas-Vindas"
+  },
+  {
+   "fieldname": "col_break_conteudo_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "icone_pagina",
+   "fieldtype": "Data",
+   "label": "Ícone da Página"
+  },
+  {
+   "fieldname": "imagem_fundo",
+   "fieldtype": "Attach Image",
+   "label": "Imagem de Fundo"
+  },
+  {
+   "fieldname": "section_cards",
+   "fieldtype": "Section Break",
+   "label": "Cards e Atalhos"
+  },
+  {
+   "fieldname": "cards",
+   "fieldtype": "Table",
+   "label": "Cards",
+   "options": "GF UI Overlay Card"
+  },
+  {
+   "fieldname": "section_customizado",
+   "fieldtype": "Section Break",
+   "label": "Código Customizado (Avançado)"
+  },
+  {
+   "fieldname": "html_customizado",
+   "fieldtype": "Code",
+   "label": "HTML Customizado",
+   "options": "HTML"
+  },
+  {
+   "fieldname": "css_customizado",
+   "fieldtype": "Code",
+   "label": "CSS Customizado",
+   "options": "CSS"
+  },
+  {
+   "fieldname": "js_customizado",
+   "fieldtype": "Code",
+   "label": "JS Customizado",
+   "options": "JavaScript"
+  },
+  {
+   "fieldname": "section_diagnostico",
+   "fieldtype": "Section Break",
+   "label": "Diagnóstico"
+  },
+  {
+   "default": "0",
+   "fieldname": "habilitar_logs",
+   "fieldtype": "Check",
+   "label": "Habilitar Logs"
+  },
+  {
+   "fieldname": "marcador_js",
+   "fieldtype": "Data",
+   "label": "Marcador JS (identificador único no DOM)"
+  },
+  {
+   "fieldname": "versao_overlay",
+   "fieldtype": "Data",
+   "label": "Versão do Overlay"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gf Ui Overlay",
+ "name": "GF UI Overlay Page",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "prioridade_execucao",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "titulo",
+ "track_changes": 1
+}

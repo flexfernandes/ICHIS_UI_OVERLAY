@@ -1,0 +1,14 @@
+include README.md
+include requirements.txt
+include pyproject.toml
+include setup.py
+include MANIFEST.in
+recursive-include ichis_ui_overlay *.py
+recursive-include ichis_ui_overlay *.txt
+recursive-include ichis_ui_overlay *.json
+recursive-include ichis_ui_overlay *.html
+recursive-include ichis_ui_overlay/public *
+recursive-include ichis_ui_overlay/templates *
+recursive-include ichis_ui_overlay/config *
+recursive-include ichis_ui_overlay/gf_ui_overlay *
+recursive-include ichis_ui_overlay/api *

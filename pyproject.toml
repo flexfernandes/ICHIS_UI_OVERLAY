@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ichis_ui_overlay"
+version = "1.0.0"
+description = "UI Overlay Manager — Sobreposição e substituição de telas do ERPNext - GREENFARMS"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "GREENFARMS", email = "contato@greenfarms.com.br" }
+]
+dependencies = []
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ichis_ui_overlay", "ichis_ui_overlay.*"]
