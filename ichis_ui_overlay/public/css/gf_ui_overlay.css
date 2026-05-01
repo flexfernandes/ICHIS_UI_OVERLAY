@@ -1,22 +1,26 @@
 /*
- * GF UI Overlay — gf_ui_overlay.css
- * GREENFARMS | UI Overlay Manager
- *
- * Este CSS controla:
- *  1. Ocultação segura da tela original durante boot do overlay
- *  2. Container principal do overlay
- *  3. Layout da Home Moderna (GF Modern Desk)
- *  4. Cards, Hero, Busca, Indicadores, Últimas Atividades
- *  5. Animações de entrada
- *  6. Botão de retorno ao Desk original
- *  7. Responsividade
- *  8. Compatibilidade com variáveis do GF Theme Settings
+ * GF UI Overlay — gf_ui_overlay.css v2.0
+ * GREENFARMS | Modern Desk — visual corporativo limpo e imponente
  */
 
-/* =============================================================
-   FASE 1 — BOOT: oculta tela original enquanto overlay carrega
-   ============================================================= */
+/* ── VARIÁVEIS FALLBACK (ativas se GF Theme não estiver instalado) ── */
+:root {
+  --gf-bg-main:        #f1f5f9;
+  --gf-bg-card:        #ffffff;
+  --gf-bg-secondary:   #f8fafc;
+  --gf-text-main:      #0f172a;
+  --gf-text-secondary: #64748b;
+  --gf-font-main:      Inter, "Segoe UI", system-ui, Arial, sans-serif;
+  --gf-accent:         #16a34a;
+  --gf-accent-dark:    #166534;
+  --gf-border:         #e2e8f0;
+  --gf-shadow:         rgba(15,23,42,0.08);
+  --gf-overlay-topbar: 56px;
+  --gf-overlay-sidebar:220px;
+  --gf-overlay-radius: 14px;
+}
 
+/* ── BOOT: esconde Desk antes do overlay ── */
 body.gf-overlay-booting .layout-main-section,
 body.gf-overlay-booting .desk-sidebar,
 body.gf-overlay-booting .standard-sidebar,
@@ -28,178 +32,106 @@ body.gf-overlay-booting .frappe-app {
   pointer-events: none !important;
 }
 
-/* =============================================================
-   FASE 2 — ATIVO: mostra o overlay
-   ============================================================= */
-
+/* ── ACTIVE: esconde Desk, mostra overlay ── */
 body.gf-overlay-active .layout-main-section,
+body.gf-overlay-active .desk-sidebar,
+body.gf-overlay-active .standard-sidebar,
+body.gf-overlay-active .page-container,
 body.gf-overlay-active #page-desktop {
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
 body.gf-overlay-active #gf-ui-overlay-root {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column;
 }
 
-/* =============================================================
-   VARIÁVEIS DE FALLBACK (usadas se GF Theme não estiver ativo)
-   ============================================================= */
-
-:root {
-  --gf-bg-main:        var(--gf-bg-main,        #f8fafc);
-  --gf-bg-card:        var(--gf-bg-card,        #ffffff);
-  --gf-bg-secondary:   var(--gf-bg-secondary,   #ffffff);
-  --gf-text-main:      var(--gf-text-main,      #111827);
-  --gf-text-secondary: var(--gf-text-secondary, #6b7280);
-  --gf-font-main:      var(--gf-font-main,      Inter, "Segoe UI", Arial, sans-serif);
-  --gf-accent:         var(--gf-accent,         #16a34a);
-  --gf-accent-dark:    var(--gf-accent-dark,    #166534);
-  --gf-border:         var(--gf-border,         #e5e7eb);
-  --gf-shadow:         var(--gf-shadow,         rgba(15, 23, 42, 0.08));
-
-  /* Overlay específicos */
-  --gf-overlay-navbar-h:   56px;
-  --gf-overlay-radius:     12px;
-  --gf-overlay-card-radius:14px;
-  --gf-overlay-transition: 250ms ease;
-}
-
-/* =============================================================
-   CONTAINER RAIZ DO OVERLAY
-   ============================================================= */
-
+/* ════════════════════════════════════════════════════════════
+   CONTAINER RAIZ
+   ════════════════════════════════════════════════════════════ */
 #gf-ui-overlay-root {
   display: none;
   position: fixed;
-  top: var(--gf-overlay-navbar-h);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--gf-bg-main);
+  top: var(--gf-overlay-topbar);
+  left: 0; right: 0; bottom: 0;
   z-index: 900;
-  overflow-y: auto;
-  overflow-x: hidden;
   font-family: var(--gf-font-main);
   color: var(--gf-text-main);
+  background: var(--gf-bg-main);
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Animações de entrada */
-#gf-ui-overlay-root.gf-anim-fade {
-  animation: gfFadeIn var(--gf-overlay-transition) both;
+/* ── ANIMAÇÕES ── */
+.gf-anim-suave { animation: gfSuave 280ms ease both; }
+.gf-anim-fade  { animation: gfFade  280ms ease both; }
+.gf-anim-slide { animation: gfSlide 320ms ease both; }
+
+@keyframes gfSuave { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes gfFade  { from{opacity:0} to{opacity:1} }
+@keyframes gfSlide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:none} }
+
+/* ════════════════════════════════════════════════════════════
+   ESTRUTURA DA TELA
+   ════════════════════════════════════════════════════════════ */
+.gf-desk-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
-#gf-ui-overlay-root.gf-anim-slide {
-  animation: gfSlideIn var(--gf-overlay-transition) both;
-}
-
-#gf-ui-overlay-root.gf-anim-suave {
-  animation: gfSuaveIn var(--gf-overlay-transition) both;
-}
-
-@keyframes gfFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes gfSlideIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes gfSuaveIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* =============================================================
-   WRAPPER INTERNO (max-width e centralização)
-   ============================================================= */
-
-.gf-overlay-wrapper {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px 48px;
-  width: 100%;
-}
-
-.gf-overlay-wrapper.gf-full-width {
-  max-width: 100%;
-  padding: 0 16px 48px;
-}
-
-/* =============================================================
-   HERO — ÁREA DE BOAS-VINDAS
-   ============================================================= */
-
-.gf-hero {
+/* ── TOPBAR INTERNO ── */
+.gf-desk-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 36px 0 28px;
-  border-bottom: 1px solid var(--gf-border);
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-}
-
-.gf-hero-text h1 {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--gf-text-main);
-  margin: 0 0 6px;
-  line-height: 1.2;
-}
-
-.gf-hero-text p {
-  font-size: 14px;
-  color: var(--gf-text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.gf-hero-text .gf-greeting {
-  font-size: 13px;
-  color: var(--gf-accent);
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-/* =============================================================
-   BUSCA GLOBAL
-   ============================================================= */
-
-.gf-search-bar {
-  flex: 0 0 360px;
-  max-width: 100%;
-}
-
-.gf-search-inner {
-  display: flex;
-  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  height: 52px;
   background: var(--gf-bg-card);
-  border: 1px solid var(--gf-border);
-  border-radius: 10px;
-  padding: 0 14px;
-  gap: 10px;
-  transition: border-color var(--gf-overlay-transition),
-              box-shadow var(--gf-overlay-transition);
+  border-bottom: 1px solid var(--gf-border);
+  flex-shrink: 0;
   box-shadow: 0 1px 3px var(--gf-shadow);
 }
 
-.gf-search-inner:focus-within {
+.gf-desk-topbar-left { flex: 0 0 auto; }
+.gf-desk-topbar-center { flex: 1; display: flex; justify-content: center; }
+.gf-desk-topbar-right { flex: 0 0 auto; }
+
+.gf-desk-logo-area {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--gf-accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gf-desk-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gf-bg-secondary);
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  padding: 0 14px;
+  width: 420px;
+  max-width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.gf-desk-search-box:focus-within {
   border-color: var(--gf-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-accent) 12%, transparent);
+  background: var(--gf-bg-card);
 }
 
-.gf-search-icon {
-  color: var(--gf-text-secondary);
-  font-size: 16px;
-  flex-shrink: 0;
-}
+.gf-search-ico { color: var(--gf-text-secondary); font-size: 15px; }
 
-.gf-search-input {
+.gf-desk-search-input {
   flex: 1;
   border: none;
   outline: none;
@@ -207,409 +139,429 @@ body.gf-overlay-active #gf-ui-overlay-root {
   font-size: 13px;
   font-family: var(--gf-font-main);
   color: var(--gf-text-main);
-  padding: 10px 0;
+  padding: 9px 0;
 }
 
-.gf-search-input::placeholder {
+.gf-desk-search-input::placeholder { color: var(--gf-text-secondary); }
+
+.gf-desk-user-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--gf-accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* ── LAYOUT PRINCIPAL ── */
+.gf-desk-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SIDEBAR
+   ════════════════════════════════════════════════════════════ */
+.gf-desk-sidebar {
+  width: var(--gf-overlay-sidebar);
+  flex-shrink: 0;
+  background: var(--gf-bg-card);
+  border-right: 1px solid var(--gf-border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  gap: 0;
+}
+
+.gf-sidebar-group {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 12px 12px;
+}
+
+.gf-sidebar-group.gf-sidebar-bottom { margin-top: auto; border-top: 1px solid var(--gf-border); padding-top: 12px; }
+
+.gf-sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--gf-text-secondary);
+  margin: 0 0 6px 8px;
 }
 
-/* =============================================================
+.gf-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gf-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background .12s, color .12s;
+  font-family: var(--gf-font-main);
+}
+
+.gf-sidebar-link:hover,
+.gf-sidebar-active {
+  background: color-mix(in srgb, var(--gf-accent) 10%, transparent);
+  color: var(--gf-accent-dark, #166534);
+}
+
+.gf-sidebar-original-btn {
+  color: var(--gf-text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+  opacity: .7;
+}
+
+.gf-sidebar-original-btn:hover { opacity: 1; }
+
+/* ════════════════════════════════════════════════════════════
+   CONTEÚDO PRINCIPAL
+   ════════════════════════════════════════════════════════════ */
+.gf-desk-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ── HERO BANNER ── */
+.gf-desk-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--gf-accent) 8%, var(--gf-bg-card)),
+    var(--gf-bg-card));
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-overlay-radius);
+  padding: 28px 32px;
+  flex-wrap: wrap;
+}
+
+.gf-desk-hero-text { flex: 1; min-width: 260px; }
+
+.gf-desk-hero-greeting {
+  font-size: 14px;
+  color: var(--gf-text-secondary);
+  margin: 0 0 8px;
+}
+
+.gf-desk-hero-greeting strong {
+  color: var(--gf-accent);
+  font-weight: 600;
+}
+
+.gf-desk-hero-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gf-text-main);
+  margin: 0 0 8px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.gf-desk-hero-sub {
+  font-size: 13.5px;
+  color: var(--gf-text-secondary);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── KPIs ── */
+.gf-desk-hero-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.gf-kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  min-width: 100px;
+  box-shadow: 0 1px 3px var(--gf-shadow);
+}
+
+.gf-kpi-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gf-text-main);
+  line-height: 1;
+}
+
+.gf-kpi-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gf-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+/* ════════════════════════════════════════════════════════════
    SEÇÃO GENÉRICA
-   ============================================================= */
+   ════════════════════════════════════════════════════════════ */
+.gf-desk-section { display: flex; flex-direction: column; gap: 14px; }
 
-.gf-section {
-  margin-bottom: 36px;
-}
-
-.gf-section-header {
+.gf-desk-section-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
 }
 
-.gf-section-title {
-  font-size: 15px;
-  font-weight: 600;
+.gf-desk-section-title {
+  font-size: 14px;
+  font-weight: 700;
   color: var(--gf-text-main);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: -0.01em;
 }
 
-.gf-section-title::before {
+.gf-desk-section-title::before {
   content: "";
-  display: inline-block;
+  display: block;
   width: 3px;
   height: 16px;
   background: var(--gf-accent);
   border-radius: 2px;
 }
 
-.gf-section-link {
+.gf-desk-more-link {
   font-size: 12px;
   color: var(--gf-accent);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.gf-section-link:hover {
-  text-decoration: underline;
-}
+.gf-desk-more-link:hover { text-decoration: underline; }
 
-/* =============================================================
-   GRID DE CARDS DE MÓDULOS
-   ============================================================= */
-
-.gf-cards-grid {
+/* ════════════════════════════════════════════════════════════
+   GRID DE MÓDULOS
+   ════════════════════════════════════════════════════════════ */
+.gf-modules-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
 }
 
-.gf-card {
+.gf-mod-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   background: var(--gf-bg-card);
   border: 1px solid var(--gf-border);
-  border-radius: var(--gf-overlay-card-radius);
-  padding: 20px 18px;
-  cursor: pointer;
-  transition: transform var(--gf-overlay-transition),
-              box-shadow var(--gf-overlay-transition),
-              border-color var(--gf-overlay-transition);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  border-radius: var(--gf-overlay-radius);
+  padding: 16px 18px;
   text-decoration: none;
-  color: inherit;
+  color: var(--gf-text-main);
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
   position: relative;
   overflow: hidden;
 }
 
-.gf-card::before {
+.gf-mod-card::after {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--card-accent, var(--gf-accent));
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--card-acc, var(--gf-accent));
   opacity: 0;
-  transition: opacity var(--gf-overlay-transition);
+  transition: opacity .15s;
+  border-radius: 2px 0 0 2px;
 }
 
-.gf-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px var(--gf-shadow);
-  border-color: var(--card-accent, var(--gf-accent));
+.gf-mod-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--gf-shadow);
+  border-color: color-mix(in srgb, var(--card-acc, var(--gf-accent)) 40%, var(--gf-border));
 }
 
-.gf-card:hover::before {
-  opacity: 1;
-}
+.gf-mod-card:hover::after { opacity: 1; }
 
-.gf-card-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+.gf-mod-icon {
+  width: 42px; height: 42px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  background: var(--card-bg-icon, #f0fdf4);
-  flex-shrink: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card-acc, var(--gf-accent)) 12%, transparent);
 }
 
-.gf-card-body {}
+.gf-mod-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
-.gf-card-title {
-  font-size: 14px;
+.gf-mod-title {
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--gf-text-main);
-  margin: 0 0 3px;
-  line-height: 1.3;
-}
-
-.gf-card-desc {
-  font-size: 11.5px;
-  color: var(--gf-text-secondary);
-  margin: 0;
-  line-height: 1.45;
-}
-
-.gf-card-arrow {
-  color: var(--gf-text-secondary);
-  font-size: 16px;
-  align-self: flex-end;
-  margin-top: auto;
-  transition: color var(--gf-overlay-transition), transform var(--gf-overlay-transition);
-}
-
-.gf-card:hover .gf-card-arrow {
-  color: var(--card-accent, var(--gf-accent));
-  transform: translateX(3px);
-}
-
-/* =============================================================
-   INDICADORES / KPIs
-   ============================================================= */
-
-.gf-indicators-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-}
-
-.gf-indicator-card {
-  background: var(--gf-bg-card);
-  border: 1px solid var(--gf-border);
-  border-radius: var(--gf-overlay-card-radius);
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.gf-indicator-label {
-  font-size: 11px;
-  color: var(--gf-text-secondary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.gf-indicator-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--gf-text-main);
-  line-height: 1;
-}
-
-.gf-indicator-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 20px;
-  width: fit-content;
-}
-
-.gf-indicator-badge.up {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.gf-indicator-badge.down {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.gf-indicator-badge.neutral {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-/* =============================================================
-   ÚLTIMAS ATIVIDADES
-   ============================================================= */
-
-.gf-activity-list {
-  background: var(--gf-bg-card);
-  border: 1px solid var(--gf-border);
-  border-radius: var(--gf-overlay-card-radius);
-  overflow: hidden;
-}
-
-.gf-activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--gf-border);
-  transition: background var(--gf-overlay-transition);
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-}
-
-.gf-activity-item:last-child {
-  border-bottom: none;
-}
-
-.gf-activity-item:hover {
-  background: color-mix(in srgb, var(--gf-accent) 5%, transparent);
-}
-
-.gf-activity-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--gf-accent);
-  margin-top: 5px;
-  flex-shrink: 0;
-}
-
-.gf-activity-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.gf-activity-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gf-text-main);
-  margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.gf-activity-sub {
+.gf-mod-desc {
+  font-size: 11.5px;
+  color: var(--gf-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gf-mod-arrow {
+  color: var(--gf-text-secondary);
+  font-size: 16px;
+  transition: color .15s, transform .15s;
+  flex-shrink: 0;
+}
+
+.gf-mod-card:hover .gf-mod-arrow {
+  color: var(--card-acc, var(--gf-accent));
+  transform: translateX(3px);
+}
+
+/* ════════════════════════════════════════════════════════════
+   PAINEL DE ATIVIDADES
+   ════════════════════════════════════════════════════════════ */
+.gf-activity-panel {
+  background: var(--gf-bg-card);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-overlay-radius);
+  overflow: hidden;
+}
+
+.gf-act-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--gf-border);
+  transition: background .12s;
+}
+
+.gf-act-item:last-child { border-bottom: none; }
+.gf-act-item:hover { background: color-mix(in srgb, var(--gf-accent) 4%, transparent); }
+
+.gf-act-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gf-accent);
+  flex-shrink: 0;
+}
+
+.gf-act-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.gf-act-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gf-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.gf-act-sub {
   font-size: 11.5px;
   color: var(--gf-text-secondary);
   margin: 0;
 }
 
-.gf-activity-time {
+.gf-act-time {
   font-size: 11px;
   color: var(--gf-text-secondary);
   flex-shrink: 0;
   white-space: nowrap;
 }
 
-/* =============================================================
-   BOTÃO VOLTAR AO DESK ORIGINAL
-   ============================================================= */
-
-.gf-back-to-desk {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: var(--gf-bg-card);
-  border: 1px solid var(--gf-border);
-  border-radius: 40px;
-  padding: 8px 16px 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
+.gf-act-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
   color: var(--gf-text-secondary);
-  cursor: pointer;
-  box-shadow: 0 4px 12px var(--gf-shadow);
-  transition: all var(--gf-overlay-transition);
-  z-index: 1000;
-  font-family: var(--gf-font-main);
-  border: none;
 }
 
-.gf-back-to-desk:hover {
-  background: var(--gf-text-main);
-  color: var(--gf-bg-card);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--gf-shadow);
-}
-
-.gf-back-to-desk-icon {
-  font-size: 15px;
-}
-
-/* =============================================================
-   LOADING SKELETON (enquanto carrega dados dinâmicos)
-   ============================================================= */
-
-.gf-skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--gf-border) 25%,
-    color-mix(in srgb, var(--gf-border) 60%, transparent) 50%,
-    var(--gf-border) 75%
-  );
+/* ── SKELETON ── */
+.gf-sk {
+  background: linear-gradient(90deg, var(--gf-border) 25%,
+    color-mix(in srgb, var(--gf-border) 50%, transparent) 50%,
+    var(--gf-border) 75%);
   background-size: 200% 100%;
-  animation: gfSkeleton 1.4s infinite;
-  border-radius: 6px;
+  animation: gfSk 1.4s infinite;
+  border-radius: 4px;
 }
 
-@keyframes gfSkeleton {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+@keyframes gfSk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* =============================================================
-   OVERLAY MODO TEMA BLACK (herda vars do GF Theme)
-   ============================================================= */
+/* ════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ════════════════════════════════════════════════════════════ */
+.gf-desk-content::-webkit-scrollbar,
+.gf-desk-sidebar::-webkit-scrollbar { width: 5px; }
+.gf-desk-content::-webkit-scrollbar-track,
+.gf-desk-sidebar::-webkit-scrollbar-track { background: transparent; }
+.gf-desk-content::-webkit-scrollbar-thumb,
+.gf-desk-sidebar::-webkit-scrollbar-thumb { background: var(--gf-border); border-radius: 3px; }
+.gf-desk-content::-webkit-scrollbar-thumb:hover { background: var(--gf-accent); }
 
+/* ════════════════════════════════════════════════════════════
+   TEMA BLACK (herda variáveis do GF Theme Settings)
+   ════════════════════════════════════════════════════════════ */
 body[data-gf-tema="Black"] #gf-ui-overlay-root {
-  background-color: #020617;
-  color: #f9fafb;
+  --gf-bg-main:        #020617;
+  --gf-bg-card:        #0f172a;
+  --gf-bg-secondary:   #0f172a;
+  --gf-text-main:      #f1f5f9;
+  --gf-text-secondary: #94a3b8;
+  --gf-border:         #1e293b;
+  --gf-shadow:         rgba(0,0,0,.35);
+  --gf-accent:         #22c55e;
+  --gf-accent-dark:    #16a34a;
 }
 
-body[data-gf-tema="Black"] .gf-card {
-  background: #111827;
-  border-color: #1f2937;
-}
-
-body[data-gf-tema="Black"] .gf-activity-list {
-  background: #111827;
-  border-color: #1f2937;
-}
-
-body[data-gf-tema="Black"] .gf-search-inner {
-  background: #0f172a;
-  border-color: #1f2937;
-}
-
-body[data-gf-tema="Black"] .gf-indicator-card {
-  background: #111827;
-  border-color: #1f2937;
-}
-
-/* =============================================================
+/* ════════════════════════════════════════════════════════════
    RESPONSIVIDADE
-   ============================================================= */
-
-@media (max-width: 768px) {
-  .gf-hero {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 24px 0 20px;
-  }
-
-  .gf-search-bar {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-
-  .gf-overlay-wrapper {
-    padding: 0 16px 32px;
-  }
-
-  .gf-cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-  }
-
-  .gf-indicators-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .gf-back-to-desk {
-    bottom: 12px;
-    right: 12px;
-    font-size: 11px;
-    padding: 7px 12px 7px 10px;
-  }
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .gf-desk-sidebar { display: none; }
+  .gf-desk-content { padding: 20px 16px 40px; }
+  .gf-modules-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .gf-desk-search-box { width: 280px; }
 }
 
-@media (max-width: 480px) {
-  .gf-cards-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .gf-indicators-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .gf-hero-text h1 {
-    font-size: 20px;
-  }
+@media (max-width: 600px) {
+  .gf-desk-hero { padding: 20px; flex-direction: column; }
+  .gf-desk-hero-stats { width: 100%; justify-content: space-between; }
+  .gf-modules-grid { grid-template-columns: 1fr 1fr; }
+  .gf-desk-topbar { padding: 0 14px; }
+  .gf-desk-search-box { width: 100%; }
 }

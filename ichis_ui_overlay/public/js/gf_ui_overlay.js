@@ -1,835 +1,344 @@
 /**
- * GF UI Overlay — gf_ui_overlay.js
- * GREENFARMS | UI Overlay Manager v1.0.0
- *
- * Responsabilidades:
- *  1. Interceptar rotas do ERPNext (pushState, popstate, frappe.router, setInterval)
- *  2. Ocultar o Desk original imediatamente (body.gf-overlay-booting)
- *  3. Renderizar o GF Modern Desk moderno em seu lugar
- *  4. Controlar fallback seguro para o Desk original
- *  5. Suportar cards configurados no Doctype GF UI Overlay Page
- *  6. Consumir variáveis visuais do GF Theme Settings quando disponível
- *  7. Diagnóstico no console
- *
- * Diagnóstico:
- *   window.gfUIOverlayVersion   → "GF_UI_OVERLAY_V1"
- *   window.gfUIOverlayLoaded    → true
- *   window.gfCurrentRoute       → rota atual normalizada
+ * GF UI Overlay — gf_ui_overlay.js  v2.0
+ * GREENFARMS | UI Overlay Manager
+ * Diagnóstico: window.gfUIOverlayVersion / window.gfUIOverlayLoaded / window.gfCurrentRoute
  */
 
-// ─── DIAGNÓSTICO ─────────────────────────────────────────────
-window.gfUIOverlayVersion = "GF_UI_OVERLAY_V1";
+// CAMADA 0: bloquear Desk IMEDIATAMENTE (roda antes do Frappe renderizar qualquer coisa)
+(function gfImmediateBoot() {
+  var s = document.createElement("style");
+  s.id  = "gf-boot-blocker";
+  s.textContent =
+    "body.gf-overlay-booting .layout-main-section," +
+    "body.gf-overlay-booting .desk-sidebar," +
+    "body.gf-overlay-booting .standard-sidebar," +
+    "body.gf-overlay-booting .page-container," +
+    "body.gf-overlay-booting .layout-main," +
+    "body.gf-overlay-booting #page-desktop," +
+    "body.gf-overlay-booting .frappe-app{visibility:hidden!important;pointer-events:none!important}" +
+    "#gf-ui-overlay-root{display:none}" +
+    "body.gf-overlay-active #gf-ui-overlay-root{display:flex!important;flex-direction:column}" +
+    "body.gf-overlay-active .layout-main-section," +
+    "body.gf-overlay-active #page-desktop," +
+    "body.gf-overlay-active .desk-sidebar," +
+    "body.gf-overlay-active .standard-sidebar," +
+    "body.gf-overlay-active .page-container{visibility:hidden!important;pointer-events:none!important}";
+  (document.head || document.documentElement).appendChild(s);
+  if (document.body) document.body.classList.add("gf-overlay-booting");
+  else document.addEventListener("DOMContentLoaded", function(){document.body.classList.add("gf-overlay-booting");},{once:true});
+})();
 
-// Evita duplicidade total do script
+window.gfUIOverlayVersion = "GF_UI_OVERLAY_V2";
+window.gfCurrentRoute     = null;
+window.gfOverlayActive    = false;
+window.gfOverlayRendered  = false;
+window.gfOverlaySettings  = null;
+window.gfOverlayPages     = [];
+
 if (window.gfUIOverlayLoaded) {
-  _gfLog("Script já carregado — ignorando duplicata.");
+  console.log("[GF Overlay] já carregado.");
 } else {
-  window.gfUIOverlayLoaded  = true;
-  window.gfOverlayRendered  = false;
-  window.gfCurrentRoute     = null;
-  window.gfOverlaySettings  = null;
-  window.gfOverlayPages     = [];
-  window.gfOverlayActive    = false;
-
-  _gfLog("GF UI Overlay iniciando...", window.gfUIOverlayVersion);
-  _gfBootOverlay();
+  window.gfUIOverlayLoaded = true;
+  console.log("[GF Overlay] v2 iniciando...");
+  _gfStart();
 }
 
-// ─── LOG HELPER ──────────────────────────────────────────────
-function _gfLog() {
-  // Só loga depois de ter settings; antes, sempre loga para depuração de boot
-  if (window.gfOverlaySettings && !window.gfOverlaySettings.diagnostico_console) return;
-  console.log("[GF Overlay]", ...arguments);
-}
-
-function _gfWarn() {
-  console.warn("[GF Overlay]", ...arguments);
-}
-
-// ─── BOOT (IIFE imediata) ─────────────────────────────────────
-function _gfBootOverlay() {
-  // Aplica classe de boot imediatamente para esconder o Desk
-  // antes mesmo de carregar configurações
-  _gfApplyBootClass();
-
-  // Múltiplos pontos de entrada para garantir execução
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", _gfOnDOMReady);
-  } else {
-    _gfOnDOMReady();
-  }
-
-  window.addEventListener("load", function () {
-    _gfLog("window.load — verificando overlay...");
-    setTimeout(_gfCheckAndApply, 80);
-  });
-
-  // Monkey-patch de history para capturar navegação SPA
+function _gfStart() {
   _gfPatchHistory();
-
-  // Listener popstate (botão voltar/avançar)
-  window.addEventListener("popstate", function () {
-    _gfLog("popstate detectado");
-    setTimeout(interceptRouteChange, 50);
-  });
+  window.addEventListener("popstate", function(){setTimeout(_gfCheck,30);});
+  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded",_gfOnReady);
+  else _gfOnReady();
+  window.addEventListener("load",function(){setTimeout(_gfCheck,80);});
 }
 
-// ─── DOM READY ───────────────────────────────────────────────
-function _gfOnDOMReady() {
-  _gfLog("DOM pronto.");
+function _gfOnReady() {
+  document.body.classList.add("gf-overlay-booting");
+  if (typeof frappe!=="undefined" && frappe.ready) frappe.ready(_gfInit);
+  setTimeout(_gfInit, 200);
+  setTimeout(_gfCheck, 600);
+  setTimeout(_gfCheck, 1200);
+}
 
-  if (typeof frappe !== "undefined" && frappe.ready) {
-    frappe.ready(function () {
-      _gfLog("frappe.ready disparado.");
-      _gfInitAfterFrappe();
+var _gfInitDone = false;
+function _gfInit() {
+  if (_gfInitDone){_gfCheck();return;} _gfInitDone=true;
+  _gfFetchSettings(function(settings){
+    window.gfOverlaySettings = settings || {ativar_sobreposicoes:0};
+    if (!settings||!settings.ativar_sobreposicoes){console.log("[GF Overlay] Desativado.");_gfFallback();return;}
+    _gfFetchPages(function(){
+      try{if(typeof frappe!=="undefined"&&frappe.router&&frappe.router.on)frappe.router.on("change",function(){setTimeout(_gfCheck,30);});}catch(e){}
+      _gfObserveDOM();
+      var _lr="";
+      setInterval(function(){var c=_gfRoute();if(c!==_lr){_lr=c;_gfCheck();}},400);
+      _gfCheck();
     });
-  } else {
-    // frappe não disponível ainda — tenta logo
-    setTimeout(_gfInitAfterFrappe, 200);
-  }
-
-  // Fallback agressivo: tentar em 100ms e 300ms
-  setTimeout(_gfCheckAndApply, 100);
-  setTimeout(_gfCheckAndApply, 350);
-}
-
-// ─── INICIALIZAÇÃO APÓS FRAPPE ───────────────────────────────
-function _gfInitAfterFrappe() {
-  loadOverlaySettings()
-    .then(function (settings) {
-      if (!settings || !settings.ativar_sobreposicoes) {
-        _gfLog("Overlay desativado nas configurações.");
-        fallbackToOriginalDesk();
-        return;
-      }
-
-      window.gfOverlaySettings = settings;
-
-      return loadActivePages().then(function () {
-        // Registrar no frappe.router se disponível
-        _gfRegisterFrappeRouter();
-        // Observar mudanças de DOM
-        observeDOMChanges();
-        // Observar mudanças de rota via setInterval leve
-        observeRouteChanges();
-        // Verificar rota atual imediatamente
-        interceptRouteChange();
-      });
-    })
-    .catch(function (err) {
-      _gfWarn("Erro ao inicializar:", err);
-      fallbackToOriginalDesk();
-    });
-}
-
-// ─── CARREGAR CONFIGURAÇÕES ──────────────────────────────────
-function loadOverlaySettings() {
-  return new Promise(function (resolve) {
-    try {
-      if (typeof frappe !== "undefined" && frappe.call) {
-        frappe.call({
-          method: "ichis_ui_overlay.api.overlay.get_overlay_settings",
-          callback: function (r) { resolve(r && r.message ? r.message : null); },
-          error:    function ()  { resolve(null); },
-        });
-      } else {
-        fetch("/api/method/ichis_ui_overlay.api.overlay.get_overlay_settings", {
-          credentials: "same-origin",
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (d) { resolve(d && d.message ? d.message : null); })
-          .catch(function ()  { resolve(null); });
-      }
-    } catch (e) {
-      resolve(null);
-    }
   });
 }
 
-// ─── CARREGAR PÁGINAS ATIVAS ─────────────────────────────────
-function loadActivePages() {
-  return new Promise(function (resolve) {
-    try {
-      const call = typeof frappe !== "undefined" && frappe.call ? frappe.call : null;
-      if (call) {
-        frappe.call({
-          method: "ichis_ui_overlay.api.overlay.get_active_overlay_pages",
-          callback: function (r) {
-            window.gfOverlayPages = (r && r.message) ? r.message : [];
-            _gfLog("Páginas carregadas:", window.gfOverlayPages.length);
-            resolve();
-          },
-          error: function () { window.gfOverlayPages = []; resolve(); },
-        });
-      } else {
-        fetch("/api/method/ichis_ui_overlay.api.overlay.get_active_overlay_pages", {
-          credentials: "same-origin",
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            window.gfOverlayPages = (d && d.message) ? d.message : [];
-            resolve();
-          })
-          .catch(function () { window.gfOverlayPages = []; resolve(); });
-      }
-    } catch (e) {
-      window.gfOverlayPages = [];
-      resolve();
-    }
-  });
+function _gfCheck() {
+  try {
+    try{if(sessionStorage.getItem("gf_overlay_disabled")==="1"){_gfFallback();return;}}catch(e){}
+    var route=_gfRoute(); window.gfCurrentRoute=route;
+    var page=_gfMatch(route);
+    if (page){if(!window.gfOverlayRendered||window.gfLastPage!==page.nome_tecnico)_gfApply(page);}
+    else{if(window.gfOverlayActive)_gfRemove();else _gfFallback();}
+  } catch(err){console.warn("[GF Overlay] _gfCheck:",err);_gfFallback();}
 }
 
-// ─── ROTA ATUAL ──────────────────────────────────────────────
-function getCurrentRoute() {
-  return _gfNormalizeRoute(window.location.pathname);
+function _gfRoute() {
+  return (window.location.pathname||"/app").replace(/\/$/,"").replace(/#.*$/,"").replace(/\?.*$/,"")||"/app";
 }
 
-function _gfNormalizeRoute(path) {
-  if (!path) return "/app";
-  // Remove trailing slash, hash, query string
-  return path.replace(/\/$/, "").replace(/#.*$/, "").replace(/\?.*$/, "") || "/app";
-}
-
-// ─── MATCH DE ROTA ───────────────────────────────────────────
-function matchOverlayPage(route) {
-  if (!window.gfOverlayPages || !window.gfOverlayPages.length) return null;
-
-  const normalized = _gfNormalizeRoute(route);
-
-  // Rotas que correspondem ao Desk inicial
-  const deskRoutes = ["/app", "/app/workspace", "/app/workspace/home", "/desk"];
-
-  for (const page of window.gfOverlayPages) {
-    if (!page.ativo && page.ativo !== 1) continue;
-
-    const pageRoute = _gfNormalizeRoute(page.rota_alvo || "");
-
-    // Match por tipo_alvo = Desk
-    if (page.tipo_alvo === "Desk") {
-      if (deskRoutes.includes(normalized.toLowerCase())) {
-        return page;
-      }
-    }
-
-    // Match por rota exata
-    if (pageRoute && normalized === pageRoute) return page;
-
-    // Match por workspace
-    if (page.tipo_alvo === "Workspace" && page.workspace_alvo) {
-      const ws = "/app/workspace/" + page.workspace_alvo.toLowerCase().replace(/\s+/g, "-");
-      if (normalized.toLowerCase().startsWith(ws)) return page;
-    }
-
-    // Match por doctype (List View)
-    if (page.tipo_alvo === "List View" && page.doctype_alvo) {
-      const dt = "/app/" + page.doctype_alvo.toLowerCase().replace(/\s+/g, "-");
-      if (normalized.toLowerCase().startsWith(dt)) return page;
-    }
+var GF_DESK_ROUTES=["/app","/app/workspace","/desk","/app/workspace/home"];
+function _gfMatch(route){
+  var pages=window.gfOverlayPages||[]; var norm=route.toLowerCase();
+  for(var i=0;i<pages.length;i++){
+    var p=pages[i]; if(!p.ativo&&p.ativo!==1)continue;
+    if(p.tipo_alvo==="Desk"){for(var d=0;d<GF_DESK_ROUTES.length;d++)if(norm===GF_DESK_ROUTES[d]||norm.startsWith(GF_DESK_ROUTES[d]+"/"))return p;}
+    var pr=(p.rota_alvo||"").toLowerCase().replace(/\/$/,"");
+    if(pr&&(norm===pr||norm.startsWith(pr+"/")))return p;
   }
-
   return null;
 }
 
-// ─── INTERCEPTAÇÃO DE ROTA ───────────────────────────────────
-function interceptRouteChange() {
-  try {
-    const route = getCurrentRoute();
-    window.gfCurrentRoute = route;
-    _gfLog("Rota atual:", route);
-
-    const page = matchOverlayPage(route);
-
-    if (page) {
-      _gfLog("Match encontrado:", page.titulo, "— aplicando overlay...");
-      applyOverlay(page);
-    } else {
-      // Fora das rotas com overlay — restaura tela original
-      if (window.gfOverlayActive) {
-        _gfLog("Rota sem overlay — removendo...");
-        removeOverlay();
-      } else {
-        // Remove classe de boot para não travar a tela
-        _gfRemoveBootClass();
-      }
-    }
-  } catch (err) {
-    _gfWarn("Erro em interceptRouteChange:", err);
-    fallbackToOriginalDesk();
-  }
-}
-
-// ─── OBSERVAR MUDANÇAS DE ROTA ───────────────────────────────
-function observeRouteChanges() {
-  let lastRoute = getCurrentRoute();
-
-  // Verificação leve a cada 400ms
-  setInterval(function () {
-    const cur = getCurrentRoute();
-    if (cur !== lastRoute) {
-      _gfLog("Mudança de rota detectada:", lastRoute, "→", cur);
-      lastRoute = cur;
-      interceptRouteChange();
-    }
-  }, 400);
-}
-
-// ─── OBSERVAR DOM ─────────────────────────────────────────────
-function observeDOMChanges() {
-  const target = document.body || document.documentElement;
-  let debounce = null;
-
-  const observer = new MutationObserver(function (mutations) {
-    // Se overlay está ativo, verificar se o Desk tentou se mostrar
-    if (window.gfOverlayActive) {
-      const hasDeskNodes = mutations.some(function (m) {
-        return Array.from(m.addedNodes).some(function (n) {
-          return n.nodeType === 1 &&
-            (n.id === "page-desktop" || n.classList.contains("layout-main-section"));
-        });
-      });
-      if (hasDeskNodes) {
-        clearTimeout(debounce);
-        debounce = setTimeout(hideOriginalDesk, 50);
-      }
-    }
-  });
-
-  observer.observe(target, { childList: true, subtree: true });
-}
-
-// ─── MONKEY PATCH DE HISTORY ─────────────────────────────────
-function _gfPatchHistory() {
-  try {
-    const origPush    = history.pushState.bind(history);
-    const origReplace = history.replaceState.bind(history);
-
-    history.pushState = function () {
-      origPush(...arguments);
-      setTimeout(interceptRouteChange, 30);
-    };
-
-    history.replaceState = function () {
-      origReplace(...arguments);
-      setTimeout(interceptRouteChange, 30);
-    };
-  } catch (e) {
-    _gfWarn("Não foi possível patchar history:", e);
-  }
-}
-
-// ─── FRAPPE ROUTER ───────────────────────────────────────────
-function _gfRegisterFrappeRouter() {
-  try {
-    if (typeof frappe !== "undefined" && frappe.router && frappe.router.on) {
-      frappe.router.on("change", function () {
-        _gfLog("frappe.router change disparado");
-        setTimeout(interceptRouteChange, 30);
-      });
-      _gfLog("frappe.router registrado.");
-    }
-  } catch (e) {
-    _gfWarn("frappe.router indisponível:", e);
-  }
-}
-
-// ─── APLICAR OVERLAY ─────────────────────────────────────────
-function applyOverlay(page) {
-  try {
-    if (window.gfOverlayRendered && window.gfLastOverlayPage === page.nome_tecnico) return;
-
-    window.gfOverlayRendered  = true;
-    window.gfLastOverlayPage  = page.nome_tecnico;
-    window.gfOverlayActive    = true;
-
-    if (page.ocultar_tela_original) hideOriginalDesk();
-
-    if (page.tipo_alvo === "Desk" || page.tipo_alvo === "Workspace") {
-      renderModernDesk(page);
-    } else {
-      _renderGenericOverlay(page);
-    }
-  } catch (err) {
-    _gfWarn("Erro em applyOverlay:", err);
-    fallbackToOriginalDesk();
-  }
-}
-
-// ─── REMOVER OVERLAY ─────────────────────────────────────────
-function removeOverlay() {
-  try {
-    window.gfOverlayActive   = false;
-    window.gfOverlayRendered = false;
-    window.gfLastOverlayPage = null;
-
-    const root = document.getElementById("gf-ui-overlay-root");
-    if (root) root.remove();
-
-    _gfRemoveBootClass();
-    document.body.classList.remove("gf-overlay-active");
-    showOriginalScreen();
-
-    _gfLog("Overlay removido.");
-  } catch (err) {
-    _gfWarn("Erro em removeOverlay:", err);
-  }
-}
-
-// ─── MOSTRAR / OCULTAR TELA ORIGINAL ─────────────────────────
-function showOriginalScreen() {
-  document.body.classList.remove("gf-overlay-active");
-  document.body.classList.remove("gf-overlay-booting");
-  _gfLog("Tela original visível.");
-}
-
-function hideOriginalScreen() {
-  document.body.classList.add("gf-overlay-active");
-}
-
-function hideOriginalDesk() {
-  document.body.classList.remove("gf-overlay-booting");
-  document.body.classList.add("gf-overlay-active");
-  _gfLog("Desk original ocultado.");
-}
-
-function _gfApplyBootClass() {
-  document.body && document.body.classList.add("gf-overlay-booting");
-}
-
-function _gfRemoveBootClass() {
-  document.body && document.body.classList.remove("gf-overlay-booting");
-}
-
-// ─── FALLBACK ────────────────────────────────────────────────
-function fallbackToOriginalDesk() {
-  try {
-    _gfWarn("Fallback ativado — restaurando Desk original.");
-    const root = document.getElementById("gf-ui-overlay-root");
-    if (root) root.remove();
-
-    document.body.classList.remove("gf-overlay-booting");
-    document.body.classList.remove("gf-overlay-active");
-
-    window.gfOverlayActive   = false;
-    window.gfOverlayRendered = false;
-  } catch (e) {
-    // Silencioso para não travar o ERPNext
-  }
-}
-
-// ─── VERIFICAÇÃO REDUNDANTE ──────────────────────────────────
-function _gfCheckAndApply() {
-  if (!window.gfOverlaySettings) return; // settings ainda não carregadas
-  interceptRouteChange();
-}
-
-// =============================================================
-// RENDERIZAÇÃO DO GF MODERN DESK
-// =============================================================
-
-function renderModernDesk(page) {
-  try {
-    _gfLog("Renderizando GF Modern Desk:", page.titulo);
-
-    // Remove instância anterior se existir
-    const existing = document.getElementById("gf-ui-overlay-root");
-    if (existing) existing.remove();
-
-    const settings = window.gfOverlaySettings || {};
-    const anim     = settings.animacao_entrada || "Suave";
-    const animClass = {
-      "Suave": "gf-anim-suave",
-      "Fade":  "gf-anim-fade",
-      "Slide": "gf-anim-slide",
-    }[anim] || "";
-
-    const root = document.createElement("div");
-    root.id = "gf-ui-overlay-root";
-    if (animClass) root.classList.add(animClass);
-
-    // Aplicar tema black no body se detectado
-    _gfApplyThemeMode();
-
-    const maxWidth   = page.largura_maxima || "1280px";
-    const fullWidth  = page.usar_largura_total ? "gf-full-width" : "";
-    const userName   = _gfGetUserName();
-    const cards      = (page.cards || []).filter(function (c) { return c.ativo !== 0; });
-
-    root.innerHTML = _buildModernDeskHTML({
-      page, settings, userName, cards, maxWidth, fullWidth,
-    });
-
-    document.body.appendChild(root);
-
-    // Eventos após inserção no DOM
-    _gfBindOverlayEvents(root, page, settings);
-
-    // Aplicar CSS customizado da página
-    if (page.css_customizado) {
-      const style = document.createElement("style");
-      style.id    = "gf-overlay-custom-css";
-      style.textContent = page.css_customizado;
-      document.head.appendChild(style);
-    }
-
-    // Executar JS customizado da página
-    if (page.js_customizado) {
-      try { new Function(page.js_customizado)(); } catch (e) { _gfWarn("JS customizado com erro:", e); }
-    }
-
-    // Carregar últimas atividades de forma assíncrona
-    if (page.exibir_ultimas_atividades) {
-      _gfLoadRecentActivities(root);
-    }
-
-    // Transição final
-    hideOriginalDesk();
-    _gfLog("GF Modern Desk renderizado com sucesso.");
-
-  } catch (err) {
-    _gfWarn("Erro em renderModernDesk:", err);
-    fallbackToOriginalDesk();
-  }
-}
-
-// ─── BUILD HTML DA HOME MODERNA ──────────────────────────────
-function _buildModernDeskHTML(opts) {
-  const { page, settings, userName, cards, maxWidth, fullWidth } = opts;
-
-  const titulo    = page.titulo_pagina    || "Bem-vindo";
-  const subtitulo = page.subtitulo_pagina || "";
-  const boasvindas= page.texto_boas_vindas|| "";
-  const showSearch = page.exibir_busca_global !== 0;
-  const showHero   = page.exibir_area_boas_vindas !== 0;
-  const showCards  = page.exibir_cards_atalhos !== 0;
-  const showInds   = page.exibir_indicadores !== 0;
-  const showActs   = page.exibir_ultimas_atividades !== 0;
-  const showBack   = settings.mostrar_botao_voltar_tela_original;
-
-  const now = new Date();
-  const hour = now.getHours();
-  const greetWord = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const greeting  = `${greetWord}, ${userName}`;
-
-  return `
-<div class="gf-overlay-wrapper${fullWidth ? " " + fullWidth : ""}" style="max-width:${maxWidth}">
-
-  ${showHero ? `
-  <div class="gf-hero">
-    <div class="gf-hero-text">
-      <div class="gf-greeting">${greeting}</div>
-      <h1>${titulo}</h1>
-      ${subtitulo ? `<p>${subtitulo}</p>` : ""}
-      ${boasvindas ? `<p style="margin-top:6px;">${boasvindas}</p>` : ""}
-    </div>
-    ${showSearch ? `
-    <div class="gf-search-bar">
-      <div class="gf-search-inner">
-        <span class="gf-search-icon">🔍</span>
-        <input
-          type="text"
-          class="gf-search-input"
-          id="gf-overlay-search"
-          placeholder="Buscar em todo o sistema..."
-          autocomplete="off"
-        />
-      </div>
-    </div>` : ""}
-  </div>` : ""}
-
-  ${showCards && cards.length ? `
-  <div class="gf-section">
-    <div class="gf-section-header">
-      <h2 class="gf-section-title">Módulos</h2>
-    </div>
-    <div class="gf-cards-grid">
-      ${cards.map(function (c) { return _buildCardHTML(c); }).join("")}
-    </div>
-  </div>` : ""}
-
-  ${showInds ? `
-  <div class="gf-section" id="gf-indicators-section">
-    <div class="gf-section-header">
-      <h2 class="gf-section-title">Visão Geral</h2>
-    </div>
-    <div class="gf-indicators-grid">
-      ${_buildSkeletonIndicators()}
-    </div>
-  </div>` : ""}
-
-  ${showActs ? `
-  <div class="gf-section">
-    <div class="gf-section-header">
-      <h2 class="gf-section-title">Atividades Recentes</h2>
-      <a class="gf-section-link" href="/app/activity" onclick="return gfNavigate('/app/activity', event)">Ver todas</a>
-    </div>
-    <div class="gf-activity-list" id="gf-activity-list">
-      ${_buildSkeletonActivities()}
-    </div>
-  </div>` : ""}
-
-</div>
-
-${showBack ? `
-<button class="gf-back-to-desk" onclick="gfReturnToOriginalDesk()" title="Voltar ao Desk Original do ERPNext">
-  <span class="gf-back-to-desk-icon">⬡</span>
-  Desk Original
-</button>` : ""}
-  `;
-}
-
-// ─── HTML DE UM CARD ─────────────────────────────────────────
-function _buildCardHTML(c) {
-  const bgIcon  = c.cor_fundo  || "#f0fdf4";
-  const corIcon = c.cor_icone  || "#16a34a";
-  const corText = c.cor_texto  || "";
-  const href    = _gfCardHref(c);
-  const target  = c.abrir_em_nova_aba ? ' target="_blank"' : "";
-
-  return `
-<a class="gf-card"
-   href="${href}"
-   ${target}
-   onclick="return gfCardClick(this, '${_gfEsc(JSON.stringify(c))}', event)"
-   style="--card-accent:${corIcon}; ${corText ? "color:" + corText : ""}">
-  <div class="gf-card-icon-wrap" style="background:${bgIcon}; color:${corIcon}">
-    ${c.icone || "📌"}
-  </div>
-  <div class="gf-card-body">
-    <p class="gf-card-title">${c.titulo || ""}</p>
-    <p class="gf-card-desc">${c.descricao || ""}</p>
-  </div>
-  <span class="gf-card-arrow">→</span>
-</a>`;
-}
-
-function _gfCardHref(c) {
-  if (c.tipo_acao === "Abrir Doctype" && c.doctype_destino) {
-    return "/app/" + c.doctype_destino.toLowerCase().replace(/\s+/g, "-");
-  }
-  if (c.tipo_acao === "Abrir Rota" && c.rota_destino)   return c.rota_destino;
-  if (c.tipo_acao === "Abrir URL"  && c.url_destino)    return c.url_destino;
-  if (c.tipo_acao === "Abrir Report" && c.report_destino) {
-    return "/app/query-report/" + encodeURIComponent(c.report_destino);
-  }
-  return c.rota_destino || "#";
-}
-
-// ─── SKELETON LOADERS ────────────────────────────────────────
-function _buildSkeletonIndicators() {
-  return Array(4).fill(0).map(function () {
-    return `<div class="gf-indicator-card">
-      <div class="gf-skeleton" style="height:11px;width:70%;margin-bottom:8px;"></div>
-      <div class="gf-skeleton" style="height:28px;width:50%;margin-bottom:8px;"></div>
-      <div class="gf-skeleton" style="height:18px;width:35%;border-radius:20px;"></div>
-    </div>`;
-  }).join("");
-}
-
-function _buildSkeletonActivities() {
-  return Array(4).fill(0).map(function () {
-    return `<div class="gf-activity-item" style="cursor:default;">
-      <div class="gf-activity-dot" style="background:#e5e7eb;"></div>
-      <div class="gf-activity-text">
-        <div class="gf-skeleton" style="height:13px;width:60%;margin-bottom:5px;"></div>
-        <div class="gf-skeleton" style="height:11px;width:40%;"></div>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-// ─── ÚLTIMAS ATIVIDADES REAIS ─────────────────────────────────
-function _gfLoadRecentActivities(root) {
-  try {
-    if (typeof frappe === "undefined" || !frappe.call) return;
-
-    frappe.call({
-      method: "frappe.desk.notifications.get_open_count",
-      callback: function () {},
-      error:    function () {},
-    });
-
-    // Busca as últimas atividades via log
-    frappe.call({
-      method: "frappe.client.get_list",
-      args: {
-        doctype: "Activity Log",
-        fields:  ["subject", "user", "full_name", "creation"],
-        filters: [["user", "=", frappe.session.user]],
-        limit:   6,
-        order_by: "creation desc",
-      },
-      callback: function (r) {
-        const list = root.querySelector("#gf-activity-list");
-        if (!list) return;
-
-        const items = r && r.message ? r.message : [];
-        if (!items.length) {
-          list.innerHTML = `<div class="gf-activity-item" style="cursor:default;justify-content:center;">
-            <p style="color:var(--gf-text-secondary);font-size:13px;margin:0;">Nenhuma atividade recente.</p>
-          </div>`;
-          return;
-        }
-
-        list.innerHTML = items.map(function (act) {
-          const time = _gfRelativeTime(act.creation);
-          return `<div class="gf-activity-item">
-            <div class="gf-activity-dot"></div>
-            <div class="gf-activity-text">
-              <p class="gf-activity-title">${act.subject || "Atividade"}</p>
-              <p class="gf-activity-sub">${act.full_name || act.user || ""}</p>
-            </div>
-            <span class="gf-activity-time">${time}</span>
-          </div>`;
-        }).join("");
-      },
-      error: function () {},
-    });
-  } catch (e) {
-    _gfWarn("Erro ao carregar atividades:", e);
-  }
-}
-
-// ─── TEMPO RELATIVO ───────────────────────────────────────────
-function _gfRelativeTime(dateStr) {
-  try {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-    if (diff < 60)    return "agora";
-    if (diff < 3600)  return Math.floor(diff / 60) + "min";
-    if (diff < 86400) return Math.floor(diff / 3600) + "h";
-    return Math.floor(diff / 86400) + "d";
-  } catch (e) { return ""; }
-}
-
-// ─── EVENTOS DO OVERLAY ──────────────────────────────────────
-function _gfBindOverlayEvents(root, page, settings) {
-  // Busca global
-  const searchInput = root.querySelector("#gf-overlay-search");
-  if (searchInput) {
-    let searchDebounce = null;
-    searchInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const q = searchInput.value.trim();
-        if (q) {
-          if (typeof frappe !== "undefined" && frappe.utils && frappe.utils.global_search) {
-            frappe.utils.global_search(q);
-          } else {
-            window.location.href = "/app?q=" + encodeURIComponent(q);
-          }
-        }
-      }
-    });
-
-    // Atalho de teclado global: / abre busca
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "/" && document.activeElement !== searchInput
-          && !["INPUT","TEXTAREA"].includes(document.activeElement.tagName)) {
-        e.preventDefault();
-        searchInput.focus();
-        searchInput.select();
-      }
-    });
-  }
-}
-
-// ─── CLIQUE EM CARD ──────────────────────────────────────────
-window.gfCardClick = function (el, cardJson, event) {
-  try {
-    const card = JSON.parse(cardJson);
-
-    if (card.tipo_acao === "Executar Script" && card.script_acao) {
-      event.preventDefault();
-      try { new Function(card.script_acao)(); } catch (e) { _gfWarn("Script do card com erro:", e); }
-      return false;
-    }
-
-    // Navegação interna via frappe.set_route
-    if (!card.abrir_em_nova_aba && card.tipo_acao !== "Abrir URL") {
-      const href = el.getAttribute("href");
-      if (href && href !== "#" && typeof frappe !== "undefined" && frappe.set_route) {
-        event.preventDefault();
-        const route = href.replace(/^\/app\//, "").split("/");
-        frappe.set_route(route);
-        return false;
-      }
-    }
-  } catch (e) {
-    _gfWarn("Erro em gfCardClick:", e);
-  }
-};
-
-// ─── NAVEGAÇÃO GENÉRICA ──────────────────────────────────────
-window.gfNavigate = function (route, event) {
-  try {
-    if (event) event.preventDefault();
-    if (typeof frappe !== "undefined" && frappe.set_route) {
-      const parts = route.replace(/^\/app\//, "").split("/");
-      frappe.set_route(parts);
-    } else {
-      window.location.href = route;
-    }
-  } catch (e) {
-    window.location.href = route;
-  }
-  return false;
-};
-
-// ─── RETORNO AO DESK ORIGINAL ────────────────────────────────
-window.gfReturnToOriginalDesk = function () {
-  _gfLog("Usuário solicitou retorno ao Desk original.");
-  removeOverlay();
-
-  // Marca sessão para não reaplicar overlay nesta sessão
-  try { sessionStorage.setItem("gf_overlay_disabled", "1"); } catch (e) {}
-
-  // Força reload limpo do Desk
-  if (typeof frappe !== "undefined" && frappe.set_route) {
-    frappe.set_route("workspace");
-  } else {
-    window.location.href = "/app";
-  }
-};
-
-// ─── OVERLAY GENÉRICO (não-Desk) ─────────────────────────────
-function _renderGenericOverlay(page) {
-  const existing = document.getElementById("gf-ui-overlay-root");
-  if (existing) existing.remove();
-
-  const root = document.createElement("div");
-  root.id = "gf-ui-overlay-root";
-  root.innerHTML = `<div class="gf-overlay-wrapper">
-    <div class="gf-hero">
-      <div class="gf-hero-text">
-        <h1>${page.titulo_pagina || page.titulo}</h1>
-        ${page.subtitulo_pagina ? `<p>${page.subtitulo_pagina}</p>` : ""}
-      </div>
-    </div>
-    ${page.html_customizado || ""}
-  </div>`;
-
+function _gfApply(page){
+  window.gfOverlayRendered=true; window.gfOverlayActive=true; window.gfLastPage=page.nome_tecnico;
+  var old=document.getElementById("gf-ui-overlay-root"); if(old)old.remove();
+  var oldcss=document.getElementById("gf-overlay-page-css"); if(oldcss)oldcss.remove();
+  var root=document.createElement("div"); root.id="gf-ui-overlay-root";
+  var settings=window.gfOverlaySettings||{};
+  var animMap={"Suave":"gf-anim-suave","Fade":"gf-anim-fade","Slide":"gf-anim-slide"};
+  root.classList.add(animMap[settings.animacao_entrada]||"gf-anim-suave");
+  if(page.html_customizado&&page.html_customizado.trim().length>50) root.innerHTML=page.html_customizado;
+  else root.innerHTML=_gfBuildHTML(page,settings);
   document.body.appendChild(root);
-  hideOriginalDesk();
+  if(page.css_customizado&&page.css_customizado.trim()){var sc=document.createElement("style");sc.id="gf-overlay-page-css";sc.textContent=page.css_customizado;document.head.appendChild(sc);}
+  document.body.classList.remove("gf-overlay-booting");
+  document.body.classList.add("gf-overlay-active");
+  _gfBindEvents(root,page);
+  if(page.exibir_ultimas_atividades)_gfLoadActivities();
+  if(page.js_customizado&&page.js_customizado.trim()){try{(new Function(page.js_customizado))();}catch(e){console.warn("[GF Overlay] JS customizado:",e);}}
+  console.log("[GF Overlay] Ativo:",page.titulo);
 }
 
-// ─── UTILIDADES ───────────────────────────────────────────────
-function _gfGetUserName() {
-  try {
-    if (typeof frappe !== "undefined") {
-      return frappe.session.full_name || frappe.session.user || "usuário";
-    }
-  } catch (e) {}
-  return "usuário";
+function _gfRemove(){
+  window.gfOverlayActive=false;window.gfOverlayRendered=false;window.gfLastPage=null;
+  var r=document.getElementById("gf-ui-overlay-root");if(r)r.remove();
+  document.body.classList.remove("gf-overlay-active","gf-overlay-booting");
 }
 
-function _gfApplyThemeMode() {
-  try {
-    if (typeof frappe !== "undefined") {
-      const tema = frappe.boot && frappe.boot.gf_tema_ativo;
-      if (tema) document.body.setAttribute("data-gf-tema", tema);
-    }
-  } catch (e) {}
+function _gfFallback(){
+  document.body.classList.remove("gf-overlay-booting","gf-overlay-active");
+  window.gfOverlayActive=false;window.gfOverlayRendered=false;
 }
 
-function _gfEsc(str) {
-  return String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+// ───────────────────────────────────────────────────────────────
+// HTML DO MODERN DESK
+// ───────────────────────────────────────────────────────────────
+function _gfBuildHTML(page,settings){
+  var fullName=_gfUserFullName();
+  var hour=new Date().getHours();
+  var greet=hour<12?"Bom dia":hour<18?"Boa tarde":"Boa noite";
+  var showBack=settings.mostrar_botao_voltar_tela_original;
+  var cards=(page.cards||[]).filter(function(c){return c.ativo!==0;});
+  var cardsHTML=cards.length?cards.map(_gfCardHTML).join(""):_gfDefaultCardsHTML();
+
+  return(
+    '<div class="gf-desk-root">' +
+    '<div class="gf-desk-topbar">' +
+      '<div class="gf-desk-topbar-left">' +
+        '<div class="gf-desk-logo-area">&#127807; GREENFARMS</div>' +
+      '</div>' +
+      '<div class="gf-desk-topbar-center">' +
+        '<div class="gf-desk-search-box">' +
+          '<span class="gf-search-ico">&#128269;</span>' +
+          '<input id="gf-search-input" class="gf-desk-search-input" type="text" placeholder="Buscar... (pressione / para focar)" autocomplete="off"/>' +
+        '</div>' +
+      '</div>' +
+      '<div class="gf-desk-topbar-right">' +
+        '<span class="gf-desk-user-badge" title="'+_gfUserName()+'">' + _gfUserName().charAt(0).toUpperCase() + '</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="gf-desk-layout">' +
+
+      '<nav class="gf-desk-sidebar">' +
+        '<div class="gf-sidebar-group">' +
+          '<p class="gf-sidebar-label">Início</p>' +
+          '<a class="gf-sidebar-link gf-sidebar-active" href="/app" onclick="return gfNav(\'/app\',event)">&#127968; Início</a>' +
+        '</div>' +
+        '<div class="gf-sidebar-group">' +
+          '<p class="gf-sidebar-label">Operações</p>' +
+          '<a class="gf-sidebar-link" href="/app/selling"      onclick="return gfNav(\'/app/selling\',event)">&#128722; Vendas</a>' +
+          '<a class="gf-sidebar-link" href="/app/buying"       onclick="return gfNav(\'/app/buying\',event)">&#128230; Compras</a>' +
+          '<a class="gf-sidebar-link" href="/app/stock"        onclick="return gfNav(\'/app/stock\',event)">&#127981; Estoque</a>' +
+          '<a class="gf-sidebar-link" href="/app/accounts"     onclick="return gfNav(\'/app/accounts\',event)">&#128176; Financeiro</a>' +
+          '<a class="gf-sidebar-link" href="/app/hr"           onclick="return gfNav(\'/app/hr\',event)">&#128101; RH</a>' +
+          '<a class="gf-sidebar-link" href="/app/project"      onclick="return gfNav(\'/app/project\',event)">&#128203; Projetos</a>' +
+          '<a class="gf-sidebar-link" href="/app/crm"          onclick="return gfNav(\'/app/crm\',event)">&#129309; CRM</a>' +
+        '</div>' +
+        '<div class="gf-sidebar-group">' +
+          '<p class="gf-sidebar-label">Análises</p>' +
+          '<a class="gf-sidebar-link" href="/app/query-report" onclick="return gfNav(\'/app/query-report\',event)">&#128202; Relatórios</a>' +
+        '</div>' +
+        '<div class="gf-sidebar-group gf-sidebar-bottom">' +
+          '<p class="gf-sidebar-label">Sistema</p>' +
+          '<a class="gf-sidebar-link" href="/app/setup" onclick="return gfNav(\'/app/setup\',event)">&#9881; Configurações</a>' +
+          (showBack?'<button class="gf-sidebar-link gf-sidebar-original-btn" onclick="gfReturnToOriginalDesk()">&#8617; Desk Original</button>':'')+
+        '</div>' +
+      '</nav>' +
+
+      '<main class="gf-desk-content">' +
+
+        '<div class="gf-desk-hero">' +
+          '<div class="gf-desk-hero-text">' +
+            '<p class="gf-desk-hero-greeting">' + greet + ', <strong>' + fullName + '</strong> 👋</p>' +
+            '<h1 class="gf-desk-hero-title">' + (page.titulo_pagina||'Central de Gestão') + '</h1>' +
+            '<p class="gf-desk-hero-sub">' + (page.texto_boas_vindas||'Gerencie sua operação com eficiência e clareza.') + '</p>' +
+          '</div>' +
+          '<div class="gf-desk-hero-stats">' +
+            '<div class="gf-kpi-card" id="gf-stat-open-tasks"><span class="gf-kpi-val">—</span><span class="gf-kpi-label">Tarefas Abertas</span></div>' +
+            '<div class="gf-kpi-card" id="gf-stat-notif"><span class="gf-kpi-val">—</span><span class="gf-kpi-label">Notificações</span></div>' +
+            '<div class="gf-kpi-card"><span class="gf-kpi-val">' + new Date().toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"}) + '</span><span class="gf-kpi-label">Hoje</span></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<section class="gf-desk-section">' +
+          '<div class="gf-desk-section-hd">' +
+            '<h2 class="gf-desk-section-title">Módulos do Sistema</h2>' +
+          '</div>' +
+          '<div class="gf-modules-grid">' + cardsHTML + '</div>' +
+        '</section>' +
+
+        '<section class="gf-desk-section">' +
+          '<div class="gf-desk-section-hd">' +
+            '<h2 class="gf-desk-section-title">Atividades Recentes</h2>' +
+            '<a class="gf-desk-more-link" href="/app/activity" onclick="return gfNav(\'/app/activity\',event)">Ver todas →</a>' +
+          '</div>' +
+          '<div class="gf-activity-panel" id="gf-activity-panel">' + _gfSkeleton(5) + '</div>' +
+        '</section>' +
+
+      '</main>' +
+    '</div>' +
+    '</div>'
+  );
 }
+
+function _gfCardHTML(c){
+  var bg=c.cor_fundo||"transparent";
+  var acc=c.cor_icone||"var(--gf-accent,#16a34a)";
+  var href=_gfCardHref(c);
+  var tgt=c.abrir_em_nova_aba?' target="_blank"':"";
+  var data=(JSON.stringify(c)||"{}").replace(/"/g,"&quot;");
+  return(
+    '<a class="gf-mod-card" href="'+href+'"'+tgt+
+    ' onclick="return gfCardClick(this,&quot;'+data+'&quot;,event)"'+
+    ' style="--card-acc:'+acc+';--card-bg:'+bg+'">' +
+      '<div class="gf-mod-icon">'+( c.icone||"📌")+'</div>'+
+      '<div class="gf-mod-info">'+
+        '<span class="gf-mod-title">'+(c.titulo||"")+'</span>'+
+        '<span class="gf-mod-desc">'+(c.descricao||"")+'</span>'+
+      '</div>'+
+      '<span class="gf-mod-arrow">→</span>'+
+    '</a>'
+  );
+}
+
+function _gfCardHref(c){
+  if(c.tipo_acao==="Abrir Doctype"&&c.doctype_destino) return "/app/"+c.doctype_destino.toLowerCase().replace(/\s+/g,"-");
+  if(c.tipo_acao==="Abrir Rota"&&c.rota_destino)       return c.rota_destino;
+  if(c.tipo_acao==="Abrir URL"&&c.url_destino)          return c.url_destino;
+  if(c.tipo_acao==="Abrir Report"&&c.report_destino)    return "/app/query-report/"+encodeURIComponent(c.report_destino);
+  return c.rota_destino||"#";
+}
+
+function _gfDefaultCardsHTML(){
+  return [
+    {t:"Vendas",       d:"Pedidos e faturamento",       i:"🛒", r:"/app/selling",      c:"#16a34a"},
+    {t:"Compras",      d:"Fornecedores e recebimentos",  i:"📦", r:"/app/buying",       c:"#2563eb"},
+    {t:"Estoque",      d:"Produtos e armazéns",          i:"🏭", r:"/app/stock",        c:"#ca8a04"},
+    {t:"Financeiro",   d:"Contas e pagamentos",          i:"💰", r:"/app/accounts",     c:"#db2777"},
+    {t:"Projetos",     d:"Tarefas e cronogramas",        i:"📋", r:"/app/project",      c:"#7c3aed"},
+    {t:"CRM",          d:"Leads e oportunidades",        i:"🤝", r:"/app/crm",          c:"#ea580c"},
+    {t:"RH",           d:"Colaboradores e folha",        i:"👥", r:"/app/hr",           c:"#0369a1"},
+    {t:"Relatórios",   d:"Análises gerenciais",          i:"📊", r:"/app/query-report", c:"#15803d"},
+    {t:"Configurações",d:"Administração do sistema",     i:"⚙️", r:"/app/setup",        c:"#374151"},
+  ].map(function(d){
+    return '<a class="gf-mod-card" href="'+d.r+'" onclick="return gfNav(\''+d.r+'\',event)" style="--card-acc:'+d.c+';--card-bg:transparent">'+
+      '<div class="gf-mod-icon">'+d.i+'</div>'+
+      '<div class="gf-mod-info"><span class="gf-mod-title">'+d.t+'</span><span class="gf-mod-desc">'+d.d+'</span></div>'+
+      '<span class="gf-mod-arrow">→</span></a>';
+  }).join("");
+}
+
+function _gfSkeleton(n){var h="";for(var i=0;i<n;i++)h+='<div class="gf-act-item"><div class="gf-sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:5px"><div class="gf-sk" style="height:13px;width:55%"></div><div class="gf-sk" style="height:11px;width:35%"></div></div><div class="gf-sk" style="height:11px;width:32px"></div></div>';return h;}
+
+function _gfBindEvents(root,page){
+  var inp=root.querySelector("#gf-search-input");
+  if(inp){
+    inp.addEventListener("keydown",function(e){
+      if(e.key!=="Enter")return; var q=inp.value.trim(); if(!q)return; e.preventDefault();
+      try{if(typeof frappe!=="undefined"&&frappe.utils&&frappe.utils.global_search)frappe.utils.global_search(q);else window.location.href="/app?q="+encodeURIComponent(q);}
+      catch(ex){window.location.href="/app?q="+encodeURIComponent(q);}
+    });
+    document.addEventListener("keydown",function(e){
+      if(e.key==="/"&&!["INPUT","TEXTAREA"].includes(document.activeElement.tagName)){e.preventDefault();inp.focus();inp.select();}
+    });
+  }
+  _gfLoadStats();
+}
+
+function _gfLoadStats(){
+  try{if(typeof frappe==="undefined"||!frappe.call)return;
+  frappe.call({method:"frappe.desk.notifications.get_open_count",
+    callback:function(r){if(!r||!r.message)return;var el=document.getElementById("gf-stat-notif");if(el)el.querySelector(".gf-kpi-val").textContent=r.message.total_count||"0";},error:function(){}});}catch(e){}
+}
+
+function _gfLoadActivities(){
+  try{if(typeof frappe==="undefined"||!frappe.call)return;
+  frappe.call({method:"frappe.client.get_list",
+    args:{doctype:"Activity Log",fields:["subject","full_name","user","creation"],filters:[["user","=",frappe.session.user]],limit:7,order_by:"creation desc"},
+    callback:function(r){
+      var panel=document.getElementById("gf-activity-panel"); if(!panel)return;
+      var items=(r&&r.message)?r.message:[];
+      if(!items.length){panel.innerHTML='<div class="gf-act-empty">Nenhuma atividade recente.</div>';return;}
+      panel.innerHTML=items.map(function(a){return(
+        '<div class="gf-act-item"><div class="gf-act-dot"></div>'+
+        '<div class="gf-act-text"><span class="gf-act-title">'+(a.subject||"Atividade")+'</span>'+
+        '<span class="gf-act-sub">'+(a.full_name||a.user||"")+'</span></div>'+
+        '<span class="gf-act-time">'+_gfRelTime(a.creation)+'</span></div>');}).join("");},
+    error:function(){}});}catch(e){}
+}
+
+function _gfRelTime(s){try{var d=(Date.now()-new Date(s).getTime())/1000;if(d<60)return"agora";if(d<3600)return Math.floor(d/60)+"min";if(d<86400)return Math.floor(d/3600)+"h";return Math.floor(d/86400)+"d";}catch(e){return"";}}
+
+function _gfFetchSettings(cb){_gfAPI("ichis_ui_overlay.api.overlay.get_overlay_settings",{},cb);}
+function _gfFetchPages(cb){_gfAPI("ichis_ui_overlay.api.overlay.get_active_overlay_pages",{},function(data){window.gfOverlayPages=Array.isArray(data)?data:[];console.log("[GF Overlay] Páginas:",window.gfOverlayPages.length);cb();});}
+function _gfAPI(method,args,cb){
+  try{if(typeof frappe!=="undefined"&&frappe.call){frappe.call({method:method,args:args||{},callback:function(r){cb(r&&r.message!==undefined?r.message:null);},error:function(){cb(null);}});}
+  else{fetch("/api/method/"+method,{credentials:"same-origin"}).then(function(r){return r.json();}).then(function(d){cb(d&&d.message!==undefined?d.message:null);}).catch(function(){cb(null);});}}
+  catch(e){cb(null);}
+}
+
+window.gfNav=function(route,event){
+  if(event)event.preventDefault();
+  try{if(typeof frappe!=="undefined"&&frappe.set_route){var p=route.replace(/^\/app\/?/,"").split("/").filter(Boolean);if(p.length)frappe.set_route(p);else frappe.set_route("workspace");}else window.location.href=route;}
+  catch(e){window.location.href=route;}return false;
+};
+
+window.gfCardClick=function(el,dataStr,event){
+  try{var c=JSON.parse(dataStr);
+    if(c.tipo_acao==="Executar Script"&&c.script_acao){event.preventDefault();try{(new Function(c.script_acao))();}catch(e){}return false;}
+    if(!c.abrir_em_nova_aba){var href=_gfCardHref(c);if(href&&href!=="#"){event.preventDefault();gfNav(href,null);return false;}}}catch(e){}
+};
+
+window.gfReturnToOriginalDesk=function(){
+  try{sessionStorage.setItem("gf_overlay_disabled","1");}catch(e){}
+  _gfRemove();
+  try{if(typeof frappe!=="undefined"&&frappe.set_route)frappe.set_route("workspace");else window.location.href="/app";}catch(e){window.location.href="/app";}
+};
+
+function _gfUserName(){try{return(frappe.session.user||"").split("@")[0]||"usuário";}catch(e){return"usuário";}}
+function _gfUserFullName(){try{return frappe.session.full_name||frappe.boot.full_name||_gfUserName();}catch(e){return _gfUserName();}}
+function _gfPatchHistory(){try{["pushState","replaceState"].forEach(function(fn){var o=history[fn].bind(history);history[fn]=function(){o.apply(history,arguments);setTimeout(_gfCheck,40);});});}catch(e){}}
+function _gfObserveDOM(){new MutationObserver(function(muts){if(!window.gfOverlayActive)return;muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.id==="page-desktop"||(n.classList&&n.classList.contains("layout-main-section")))setTimeout(function(){document.body.classList.add("gf-overlay-active");},20);});});}).observe(document.documentElement,{childList:true,subtree:true});}
